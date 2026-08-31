@@ -1,5 +1,5 @@
 name: Publish to DeployLog
-description: Publish changelog entries from GitHub Releases to DeployLog. Optionally rewrite release notes for end users with AI.
+description: Publish changelog entries from GitHub Releases to DeployLog, or verify a DeployLog manual against the code it cites. Optionally rewrite release notes for end users with AI.
 author: DeployLog
 branding:
   icon: tag
@@ -7,17 +7,39 @@ branding:
 
 inputs:
   api-key:
-    description: DeployLog API key (store as a repository secret, e.g. DEPLOYLOG_API_KEY).
+    description: DeployLog API key (store as a repository secret, e.g. DEPLOYLOG_API_KEY). Verify mode needs only read permission.
     required: true
   project:
     description: Project slug from your DeployLog dashboard.
     required: true
+  mode:
+    description: "What to do: publish (create a changelog entry from a release) or verify (check the project's manual against the code it cites). Set explicitly; it is never inferred from the event."
+    required: false
+    default: publish
+  fail-on:
+    description: "Verify mode only. What fails the check: none (annotate but stay green), drift (fail when a cited value moved), any (also fail when the run could not vouch for the manual)."
+    required: false
+    default: none
+  github-token:
+    # No expression syntax anywhere in this file. Actions evaluates expressions in
+    # action.yml metadata, descriptions included, and `github` is not a context
+    # that exists at load time. One interpolation here made the whole action fail
+    # to load for every consumer, in both modes, before a single input was read.
+    # Describe the token in prose; the README carries the copyable snippet.
+    # Enforced by src/action-manifest.test.ts.
+    description: "Verify mode only. Used to read the pull request's changed files so the check is scoped to them. Pass the workflow's github.token with `permissions: pull-requests: read`. Without it the whole manual is verified on every run."
+    required: false
+    default: ""
   ai-summarize:
     description: Rewrite the release body into user-friendly release notes using Claude Haiku.
     required: false
     default: "false"
   notify-subscribers:
     description: Publish the entry immediately so email subscribers receive a digest. When false, the entry is saved as a draft you can publish from the dashboard.
+    required: false
+    default: "false"
+  skip-prerelease:
+    description: Skip GitHub prereleases (e.g. v2.0.0-rc.1) instead of publishing them to DeployLog. Useful to avoid notifying subscribers about release candidates.
     required: false
     default: "false"
   entry-type:
@@ -38,6 +60,18 @@ outputs:
     description: Whether the entry was published (true) or saved as a draft (false).
   ai-used:
     description: Whether AI summarization was used (true/false).
+  drift-count:
+    description: Verify mode. Claims whose cited value no longer matches the code. The only drift signal.
+  error-count:
+    description: Verify mode. Claims that could not be read at all. Not drift.
+  unanchored-count:
+    description: Verify mode. Chapters that declare no claims, so nothing about them can ever drift.
+  untriggered-count:
+    description: Verify mode. Claims in a repository that no push and no sweep visits. A manual spanning several repositories reports this on every run until each of them runs the check.
+  low-coverage-chapters:
+    description: Verify mode. Comma-separated chapter numbers carrying claims over too little of their own prose.
+  check-failed:
+    description: Verify mode. Whether this run failed the check (true/false). The count outputs above are empty when the run could not reach DeployLog at all, because this run received no report to count.
 
 runs:
   using: node20

@@ -6,7 +6,11 @@ var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __commonJS = (cb, mod) => function __require() {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  try {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  } catch (e) {
+    throw mod = 0, e;
+  }
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
@@ -418,18 +422,18 @@ var require_tunnel = __commonJS({
             res.statusCode
           );
           socket.destroy();
-          var error = new Error("tunneling socket could not be established, statusCode=" + res.statusCode);
-          error.code = "ECONNRESET";
-          options.request.emit("error", error);
+          var error2 = new Error("tunneling socket could not be established, statusCode=" + res.statusCode);
+          error2.code = "ECONNRESET";
+          options.request.emit("error", error2);
           self.removeSocket(placeholder);
           return;
         }
         if (head.length > 0) {
           debug2("got illegal response body from proxy");
           socket.destroy();
-          var error = new Error("got illegal response body from proxy");
-          error.code = "ECONNRESET";
-          options.request.emit("error", error);
+          var error2 = new Error("got illegal response body from proxy");
+          error2.code = "ECONNRESET";
+          options.request.emit("error", error2);
           self.removeSocket(placeholder);
           return;
         }
@@ -444,9 +448,9 @@ var require_tunnel = __commonJS({
           cause.message,
           cause.stack
         );
-        var error = new Error("tunneling socket could not be established, cause=" + cause.message);
-        error.code = "ECONNRESET";
-        options.request.emit("error", error);
+        var error2 = new Error("tunneling socket could not be established, cause=" + cause.message);
+        error2.code = "ECONNRESET";
+        options.request.emit("error", error2);
         self.removeSocket(placeholder);
       }
     };
@@ -1775,14 +1779,14 @@ var require_diagnostics = __commonJS({
       diagnosticsChannel.channel("undici:client:connectError").subscribe((evt) => {
         const {
           connectParams: { version, protocol, port, host },
-          error
+          error: error2
         } = evt;
         debuglog(
           "connection to %s using %s%s errored - %s",
           `${host}${port ? `:${port}` : ""}`,
           protocol,
           version,
-          error.message
+          error2.message
         );
       });
       diagnosticsChannel.channel("undici:client:sendHeaders").subscribe((evt) => {
@@ -1813,14 +1817,14 @@ var require_diagnostics = __commonJS({
       diagnosticsChannel.channel("undici:request:error").subscribe((evt) => {
         const {
           request: { method, path, origin },
-          error
+          error: error2
         } = evt;
         debuglog(
           "request to %s %s/%s errored - %s",
           method,
           origin,
           path,
-          error.message
+          error2.message
         );
       });
       isClientSet = true;
@@ -1855,7 +1859,7 @@ var require_diagnostics = __commonJS({
         diagnosticsChannel.channel("undici:client:connectError").subscribe((evt) => {
           const {
             connectParams: { version, protocol, port, host },
-            error
+            error: error2
           } = evt;
           debuglog(
             "connection to %s%s using %s%s errored - %s",
@@ -1863,7 +1867,7 @@ var require_diagnostics = __commonJS({
             port ? `:${port}` : "",
             protocol,
             version,
-            error.message
+            error2.message
           );
         });
         diagnosticsChannel.channel("undici:client:sendHeaders").subscribe((evt) => {
@@ -2133,16 +2137,16 @@ var require_request = __commonJS({
           this.onError(err);
         }
       }
-      onError(error) {
+      onError(error2) {
         this.onFinally();
         if (channels.error.hasSubscribers) {
-          channels.error.publish({ request: this, error });
+          channels.error.publish({ request: this, error: error2 });
         }
         if (this.aborted) {
           return;
         }
         this.aborted = true;
-        return this[kHandler].onError(error);
+        return this[kHandler].onError(error2);
       }
       onFinally() {
         if (this.errorHandler) {
@@ -3851,8 +3855,8 @@ var require_webidl = __commonJS({
       return new TypeError(`${message.header}: ${message.message}`);
     };
     webidl.errors.conversionFailed = function(context2) {
-      const plural = context2.types.length === 1 ? "" : " one of";
-      const message = `${context2.argument} could not be converted to${plural}: ${context2.types.join(", ")}.`;
+      const plural2 = context2.types.length === 1 ? "" : " one of";
+      const message = `${context2.argument} could not be converted to${plural2}: ${context2.types.join(", ")}.`;
       return webidl.errors.exception({
         header: context2.prefix,
         message
@@ -5872,7 +5876,7 @@ Content-Type: ${value.type || "application/octet-stream"}\r
       }
       throwIfAborted(object[kState]);
       const promise = createDeferredPromise();
-      const errorSteps = (error) => promise.reject(error);
+      const errorSteps = (error2) => promise.reject(error2);
       const successSteps = (data) => {
         try {
           promise.resolve(convertBytesToJSValue(data));
@@ -7380,8 +7384,8 @@ var require_client_h2 = __commonJS({
         }
         request.onRequestSent();
         client[kResume]();
-      } catch (error) {
-        abort(error);
+      } catch (error2) {
+        abort(error2);
       }
     }
     function writeStream(abort, socket, expectsPayload, h2stream, body, client, request, contentLength) {
@@ -7536,8 +7540,8 @@ var require_redirect_handler = __commonJS({
       onUpgrade(statusCode, headers, socket) {
         this.handler.onUpgrade(statusCode, headers, socket);
       }
-      onError(error) {
-        this.handler.onError(error);
+      onError(error2) {
+        this.handler.onError(error2);
       }
       onHeaders(statusCode, headers, resume, statusText) {
         this.location = this.history.length >= this.maxRedirections || util.isDisturbed(this.opts.body) ? null : parseLocation(statusCode, headers);
@@ -8466,7 +8470,7 @@ var require_pool = __commonJS({
         this[kOptions] = { ...util.deepClone(options), connect, allowH2 };
         this[kOptions].interceptors = options.interceptors ? { ...options.interceptors } : void 0;
         this[kFactory] = factory;
-        this.on("connectionError", (origin2, targets, error) => {
+        this.on("connectionError", (origin2, targets, error2) => {
           for (const target of targets) {
             const idx = this[kClients].indexOf(target);
             if (idx !== -1) {
@@ -10833,13 +10837,13 @@ var require_mock_utils = __commonJS({
       if (mockDispatch2.data.callback) {
         mockDispatch2.data = { ...mockDispatch2.data, ...mockDispatch2.data.callback(opts) };
       }
-      const { data: { statusCode, data, headers, trailers, error }, delay, persist } = mockDispatch2;
+      const { data: { statusCode, data, headers, trailers, error: error2 }, delay, persist } = mockDispatch2;
       const { timesInvoked, times } = mockDispatch2;
       mockDispatch2.consumed = !persist && timesInvoked >= times;
       mockDispatch2.pending = timesInvoked < times;
-      if (error !== null) {
+      if (error2 !== null) {
         deleteMockDispatch(this[kDispatches], key);
-        handler.onError(error);
+        handler.onError(error2);
         return true;
       }
       if (typeof delay === "number" && delay > 0) {
@@ -10877,19 +10881,19 @@ var require_mock_utils = __commonJS({
         if (agent.isMockActive) {
           try {
             mockDispatch.call(this, opts, handler);
-          } catch (error) {
-            if (error instanceof MockNotMatchedError) {
+          } catch (error2) {
+            if (error2 instanceof MockNotMatchedError) {
               const netConnect = agent[kGetNetConnect]();
               if (netConnect === false) {
-                throw new MockNotMatchedError(`${error.message}: subsequent request to origin ${origin} was not allowed (net.connect disabled)`);
+                throw new MockNotMatchedError(`${error2.message}: subsequent request to origin ${origin} was not allowed (net.connect disabled)`);
               }
               if (checkNetConnect(netConnect, origin)) {
                 originalDispatch.call(this, opts, handler);
               } else {
-                throw new MockNotMatchedError(`${error.message}: subsequent request to origin ${origin} was not allowed (net.connect is not enabled for this origin)`);
+                throw new MockNotMatchedError(`${error2.message}: subsequent request to origin ${origin} was not allowed (net.connect is not enabled for this origin)`);
               }
             } else {
-              throw error;
+              throw error2;
             }
           }
         } else {
@@ -11054,11 +11058,11 @@ var require_mock_interceptor = __commonJS({
       /**
        * Mock an undici request with a defined error.
        */
-      replyWithError(error) {
-        if (typeof error === "undefined") {
+      replyWithError(error2) {
+        if (typeof error2 === "undefined") {
           throw new InvalidArgumentError("error must be defined");
         }
-        const newMockDispatch = addMockDispatch(this[kDispatches], this[kDispatchKey], { error });
+        const newMockDispatch = addMockDispatch(this[kDispatches], this[kDispatchKey], { error: error2 });
         return new MockScope(newMockDispatch);
       }
       /**
@@ -11217,9 +11221,9 @@ var require_pluralizer = __commonJS({
       this: "these"
     };
     module2.exports = class Pluralizer {
-      constructor(singular, plural) {
+      constructor(singular, plural2) {
         this.singular = singular;
-        this.plural = plural;
+        this.plural = plural2;
       }
       pluralize(count) {
         const one = count === 1;
@@ -13576,17 +13580,17 @@ var require_fetch = __commonJS({
         this.emit("terminated", reason);
       }
       // https://fetch.spec.whatwg.org/#fetch-controller-abort
-      abort(error) {
+      abort(error2) {
         if (this.state !== "ongoing") {
           return;
         }
         this.state = "aborted";
-        if (!error) {
-          error = new DOMException("The operation was aborted.", "AbortError");
+        if (!error2) {
+          error2 = new DOMException("The operation was aborted.", "AbortError");
         }
-        this.serializedAbortReason = error;
-        this.connection?.destroy(error);
-        this.emit("terminated", error);
+        this.serializedAbortReason = error2;
+        this.connection?.destroy(error2);
+        this.emit("terminated", error2);
       }
     };
     function handleFetchDone(response) {
@@ -13682,12 +13686,12 @@ var require_fetch = __commonJS({
       );
     }
     var markResourceTiming = performance.markResourceTiming;
-    function abortFetch(p, request, responseObject, error) {
+    function abortFetch(p, request, responseObject, error2) {
       if (p) {
-        p.reject(error);
+        p.reject(error2);
       }
       if (request.body != null && isReadable(request.body?.stream)) {
-        request.body.stream.cancel(error).catch((err) => {
+        request.body.stream.cancel(error2).catch((err) => {
           if (err.code === "ERR_INVALID_STATE") {
             return;
           }
@@ -13699,7 +13703,7 @@ var require_fetch = __commonJS({
       }
       const response = responseObject[kState];
       if (response.body != null && isReadable(response.body?.stream)) {
-        response.body.stream.cancel(error).catch((err) => {
+        response.body.stream.cancel(error2).catch((err) => {
           if (err.code === "ERR_INVALID_STATE") {
             return;
           }
@@ -14520,13 +14524,13 @@ var require_fetch = __commonJS({
               fetchParams.controller.ended = true;
               this.body.push(null);
             },
-            onError(error) {
+            onError(error2) {
               if (this.abort) {
                 fetchParams.controller.off("terminated", this.abort);
               }
-              this.body?.destroy(error);
-              fetchParams.controller.terminate(error);
-              reject(error);
+              this.body?.destroy(error2);
+              fetchParams.controller.terminate(error2);
+              reject(error2);
             },
             onUpgrade(status, rawHeaders, socket) {
               if (status !== 101) {
@@ -14989,8 +14993,8 @@ var require_util4 = __commonJS({
                   }
                   fr[kResult] = result;
                   fireAProgressEvent("load", fr);
-                } catch (error) {
-                  fr[kError] = error;
+                } catch (error2) {
+                  fr[kError] = error2;
                   fireAProgressEvent("error", fr);
                 }
                 if (fr[kState] !== "loading") {
@@ -14999,13 +15003,13 @@ var require_util4 = __commonJS({
               });
               break;
             }
-          } catch (error) {
+          } catch (error2) {
             if (fr[kAborted]) {
               return;
             }
             queueMicrotask(() => {
               fr[kState] = "done";
-              fr[kError] = error;
+              fr[kError] = error2;
               fireAProgressEvent("error", fr);
               if (fr[kState] !== "loading") {
                 fireAProgressEvent("loadend", fr);
@@ -17277,11 +17281,11 @@ var require_connection = __commonJS({
         });
       }
     }
-    function onSocketError(error) {
+    function onSocketError(error2) {
       const { ws } = this;
       ws[kReadyState] = states.CLOSING;
       if (channels.socketError.hasSubscribers) {
-        channels.socketError.publish(error);
+        channels.socketError.publish(error2);
       }
       this.destroy();
     }
@@ -17563,9 +17567,9 @@ var require_receiver = __commonJS({
                 this.#extensions.get("permessage-deflate").decompress(
                   body,
                   this.#info.fin,
-                  (error, data) => {
-                    if (error) {
-                      failWebsocketConnection(this.ws, error.message);
+                  (error2, data) => {
+                    if (error2) {
+                      failWebsocketConnection(this.ws, error2.message);
                       return;
                     }
                     this.writeFragments(data);
@@ -18619,8 +18623,8 @@ var require_eventsource = __commonJS({
           pipeline(
             response.body.stream,
             eventSourceStream,
-            (error) => {
-              if (error?.aborted === false) {
+            (error2) => {
+              if (error2?.aborted === false) {
                 this.close();
                 this.dispatchEvent(new Event("error"));
               }
@@ -19678,12 +19682,12 @@ var require_oidc_utils = __commonJS({
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
           const httpclient = _OidcClient.createHttpClient();
-          const res = yield httpclient.getJson(id_token_url).catch((error) => {
+          const res = yield httpclient.getJson(id_token_url).catch((error2) => {
             throw new Error(`Failed to get ID Token. 
  
-        Error Code : ${error.statusCode}
+        Error Code : ${error2.statusCode}
  
-        Error Message: ${error.message}`);
+        Error Message: ${error2.message}`);
           });
           const id_token = (_a = res.result) === null || _a === void 0 ? void 0 : _a.value;
           if (!id_token) {
@@ -19704,8 +19708,8 @@ var require_oidc_utils = __commonJS({
             const id_token = yield _OidcClient.getCall(id_token_url);
             (0, core_1.setSecret)(id_token);
             return id_token;
-          } catch (error) {
-            throw new Error(`Error message: ${error.message}`);
+          } catch (error2) {
+            throw new Error(`Error message: ${error2.message}`);
           }
         });
       }
@@ -20827,7 +20831,7 @@ var require_toolrunner = __commonJS({
               this._debug(`STDIO streams have closed for tool '${this.toolPath}'`);
               state.CheckComplete();
             });
-            state.on("done", (error, exitCode) => {
+            state.on("done", (error2, exitCode) => {
               if (stdbuffer.length > 0) {
                 this.emit("stdline", stdbuffer);
               }
@@ -20835,8 +20839,8 @@ var require_toolrunner = __commonJS({
                 this.emit("errline", errbuffer);
               }
               cp.removeAllListeners();
-              if (error) {
-                reject(error);
+              if (error2) {
+                reject(error2);
               } else {
                 resolve(exitCode);
               }
@@ -20931,14 +20935,14 @@ var require_toolrunner = __commonJS({
         this.emit("debug", message);
       }
       _setResult() {
-        let error;
+        let error2;
         if (this.processExited) {
           if (this.processError) {
-            error = new Error(`There was an error when attempting to execute the process '${this.toolPath}'. This may indicate the process failed to start. Error: ${this.processError}`);
+            error2 = new Error(`There was an error when attempting to execute the process '${this.toolPath}'. This may indicate the process failed to start. Error: ${this.processError}`);
           } else if (this.processExitCode !== 0 && !this.options.ignoreReturnCode) {
-            error = new Error(`The process '${this.toolPath}' failed with exit code ${this.processExitCode}`);
+            error2 = new Error(`The process '${this.toolPath}' failed with exit code ${this.processExitCode}`);
           } else if (this.processStderr && this.options.failOnStdErr) {
-            error = new Error(`The process '${this.toolPath}' failed because one or more lines were written to the STDERR stream`);
+            error2 = new Error(`The process '${this.toolPath}' failed because one or more lines were written to the STDERR stream`);
           }
         }
         if (this.timeout) {
@@ -20946,7 +20950,7 @@ var require_toolrunner = __commonJS({
           this.timeout = null;
         }
         this.done = true;
-        this.emit("done", error, this.processExitCode);
+        this.emit("done", error2, this.processExitCode);
       }
       static HandleTimeout(state) {
         if (state.done) {
@@ -21269,10 +21273,10 @@ var require_core = __commonJS({
       (0, command_1.issueCommand)("set-env", { name }, convertedVal);
     }
     exports2.exportVariable = exportVariable;
-    function setSecret(secret) {
+    function setSecret2(secret) {
       (0, command_1.issueCommand)("add-mask", {}, secret);
     }
-    exports2.setSecret = setSecret;
+    exports2.setSecret = setSecret2;
     function addPath(inputPath) {
       const filePath = process.env["GITHUB_PATH"] || "";
       if (filePath) {
@@ -21329,7 +21333,7 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
     exports2.setCommandEcho = setCommandEcho;
     function setFailed2(message) {
       process.exitCode = ExitCode.Failure;
-      error(message);
+      error2(message);
     }
     exports2.setFailed = setFailed2;
     function isDebug() {
@@ -21340,10 +21344,10 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
       (0, command_1.issueCommand)("debug", {}, message);
     }
     exports2.debug = debug2;
-    function error(message, properties = {}) {
+    function error2(message, properties = {}) {
       (0, command_1.issueCommand)("error", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
-    exports2.error = error;
+    exports2.error = error2;
     function warning2(message, properties = {}) {
       (0, command_1.issueCommand)("warning", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
@@ -21645,8 +21649,8 @@ var require_add = __commonJS({
       }
       if (kind === "error") {
         hook = function(method, options) {
-          return Promise.resolve().then(method.bind(null, options)).catch(function(error) {
-            return orig(error, options);
+          return Promise.resolve().then(method.bind(null, options)).catch(function(error2) {
+            return orig(error2, options);
           });
         };
       }
@@ -22378,7 +22382,7 @@ var require_dist_node5 = __commonJS({
         }
         if (status >= 400) {
           const data = await getResponseData(response);
-          const error = new import_request_error.RequestError(toErrorMessage(data), status, {
+          const error2 = new import_request_error.RequestError(toErrorMessage(data), status, {
             response: {
               url,
               status,
@@ -22387,7 +22391,7 @@ var require_dist_node5 = __commonJS({
             },
             request: requestOptions
           });
-          throw error;
+          throw error2;
         }
         return parseSuccessResponseBody ? await getResponseData(response) : response.body;
       }).then((data) => {
@@ -22397,17 +22401,17 @@ var require_dist_node5 = __commonJS({
           headers,
           data
         };
-      }).catch((error) => {
-        if (error instanceof import_request_error.RequestError)
-          throw error;
-        else if (error.name === "AbortError")
-          throw error;
-        let message = error.message;
-        if (error.name === "TypeError" && "cause" in error) {
-          if (error.cause instanceof Error) {
-            message = error.cause.message;
-          } else if (typeof error.cause === "string") {
-            message = error.cause;
+      }).catch((error2) => {
+        if (error2 instanceof import_request_error.RequestError)
+          throw error2;
+        else if (error2.name === "AbortError")
+          throw error2;
+        let message = error2.message;
+        if (error2.name === "TypeError" && "cause" in error2) {
+          if (error2.cause instanceof Error) {
+            message = error2.cause.message;
+          } else if (typeof error2.cause === "string") {
+            message = error2.cause;
           }
         }
         throw new import_request_error.RequestError(message, 500, {
@@ -25079,9 +25083,9 @@ var require_dist_node10 = __commonJS({
                 /<([^<>]+)>;\s*rel="next"/
               ) || [])[1];
               return { value: normalizedResponse };
-            } catch (error) {
-              if (error.status !== 409)
-                throw error;
+            } catch (error2) {
+              if (error2.status !== 409)
+                throw error2;
               url = "";
               return {
                 value: {
@@ -25478,11 +25482,11 @@ var require_github = __commonJS({
     var Context = __importStar(require_context());
     var utils_1 = require_utils4();
     exports2.context = new Context.Context();
-    function getOctokit(token, options, ...additionalPlugins) {
+    function getOctokit2(token, options, ...additionalPlugins) {
       const GitHubWithPlugins = utils_1.GitHub.plugin(...additionalPlugins);
       return new GitHubWithPlugins((0, utils_1.getOctokitOptions)(token, options));
     }
-    exports2.getOctokit = getOctokit;
+    exports2.getOctokit = getOctokit2;
   }
 });
 
@@ -25492,6 +25496,192 @@ var github = __toESM(require_github());
 
 // src/inputs.ts
 var core = __toESM(require_core());
+
+// src/annotate.ts
+var ANNOTATION_LIMIT = 10;
+var canonicalSlug = (repository) => repository.trim().toLowerCase();
+function planAnnotations(report, context2) {
+  const here = canonicalSlug(context2.repository);
+  const annotations = [];
+  const unreachable = [];
+  const errors = [];
+  for (const chapter of report.chapters) {
+    for (const error2 of chapter.errors) {
+      errors.push({ ...error2, chapter: chapter.number });
+    }
+    for (const finding of chapter.confirmed) {
+      if (canonicalSlug(finding.repository) !== here) {
+        unreachable.push(describe(finding, chapter, "other_repository"));
+        continue;
+      }
+      if (finding.line === null) {
+        unreachable.push(describe(finding, chapter, "no_line"));
+        continue;
+      }
+      annotations.push({
+        file: finding.source,
+        line: finding.line,
+        title: `Manual drift in chapter ${chapter.number}`,
+        message: findingMessage(finding, chapter)
+      });
+    }
+  }
+  return { annotations, unreachable, errors };
+}
+function describe(finding, chapter, reason) {
+  return {
+    reason,
+    chapter: chapter.number,
+    text: finding.text,
+    repository: finding.repository,
+    source: finding.source,
+    detail: finding.detail
+  };
+}
+function findingMessage(finding, chapter) {
+  return [
+    "This line no longer matches what the manual says about it.",
+    `Manual sentence: "${finding.text}"`,
+    finding.detail,
+    `Chapter ${chapter.number} "${chapter.title}", claim ${finding.claimId}.`
+  ].join("\n");
+}
+
+// src/verdict.ts
+var FAIL_ON_VALUES = ["none", "drift", "any"];
+var DEFAULT_FAIL_ON = "none";
+function parseFailOn(raw) {
+  const value = raw.trim().toLowerCase();
+  if (!value) return DEFAULT_FAIL_ON;
+  if (!isFailOn(value)) {
+    throw new Error(
+      `Invalid value for fail-on: "${raw}". Expected one of: ${FAIL_ON_VALUES.join(", ")}.`
+    );
+  }
+  return value;
+}
+function isFailOn(value) {
+  return FAIL_ON_VALUES.includes(value);
+}
+function decideVerdict(counts, failOn) {
+  const drift = counts.confirmedCount;
+  const reasons = notCleanReasons(counts);
+  const failsOnDrift = drift > 0 && (failOn === "drift" || failOn === "any");
+  const failsOnUnverifiable = reasons.length > 0 && failOn === "any";
+  const failed = failsOnDrift || failsOnUnverifiable;
+  return { drift, reasons, failed, failure: failed ? failureLine(drift, reasons) : null };
+}
+function notCleanReasons(counts) {
+  const reasons = [];
+  if (counts.errorCount > 0) {
+    reasons.push({
+      kind: "errors",
+      count: counts.errorCount,
+      summary: `${plural(counts.errorCount, "claim")} could not be read at all.`
+    });
+  }
+  if (counts.unanchoredCount > 0) {
+    reasons.push({
+      kind: "unanchored",
+      count: counts.unanchoredCount,
+      summary: `${plural(counts.unanchoredCount, "chapter")} declare no claims, so nothing about them can ever drift.`
+    });
+  }
+  if (counts.lowCoverageChapters.length > 0) {
+    reasons.push({
+      kind: "low_coverage",
+      count: counts.lowCoverageChapters.length,
+      summary: `${plural(counts.lowCoverageChapters.length, "chapter")} carry claims over too little of their own prose (${counts.lowCoverageChapters.join(", ")}).`
+    });
+  }
+  if (counts.untriggeredCount > 0) {
+    reasons.push({
+      kind: "untriggered",
+      count: counts.untriggeredCount,
+      summary: `${plural(counts.untriggeredCount, "claim")} sit in a repository no push and no sweep visits, so future drift in them is invisible.`
+    });
+  }
+  return reasons;
+}
+function failureLine(drift, reasons) {
+  if (drift > 0 && reasons.length > 0) {
+    return `Manual check failed: ${plural(drift, "claim")} drifted, and this run could not vouch for the rest of the manual.`;
+  }
+  if (drift > 0) {
+    return `Manual check failed: ${plural(drift, "claim")} no longer match the code they cite.`;
+  }
+  return `Manual check failed: no drift was found, but this run could not vouch for the manual.`;
+}
+function renderSummary(report, plan, verdict) {
+  if (verdict.drift === 0 && verdict.reasons.length === 0) return "";
+  const lines = ["## DeployLog manual check", ""];
+  if (verdict.drift > 0) {
+    const shown = Math.min(plan.annotations.length, ANNOTATION_LIMIT);
+    const overflow = plan.annotations.slice(ANNOTATION_LIMIT);
+    lines.push(
+      `**Drift: ${plural(verdict.drift, "claim")} no longer ${verdict.drift === 1 ? "matches" : "match"} the code.**`,
+      "",
+      overflow.length > 0 ? `${shown} of ${plan.annotations.length} findings annotated inline on the changed lines; GitHub renders no more than ${ANNOTATION_LIMIT} per run.` : `${plural(shown, "finding")} annotated inline on the changed lines.`,
+      ""
+    );
+    if (overflow.length > 0) {
+      lines.push(
+        `### ${plural(overflow.length, "finding")} not shown inline`,
+        "",
+        ...overflow.map(
+          (annotation) => `- \`${annotation.file}:${annotation.line}\`: ${annotation.message.split("\n").filter(Boolean).join(" ")}`
+        ),
+        ""
+      );
+    }
+  } else {
+    lines.push("**No drift found.**", "");
+  }
+  if (plan.unreachable.length > 0) {
+    lines.push(
+      `### ${plural(plan.unreachable.length, "finding")} with no line in this run`,
+      "",
+      ...plan.unreachable.map(
+        (finding) => `- ${unreachableLabel(finding.reason)}: "${finding.text}" (chapter ${finding.chapter}, ${finding.repository}/${finding.source}). ${finding.detail}`
+      ),
+      ""
+    );
+  }
+  if (verdict.reasons.length > 0) {
+    lines.push(
+      "### This run could not vouch for the manual",
+      "",
+      "Separate from drift, and not a clean bill of health:",
+      "",
+      ...verdict.reasons.map((reason) => `- ${reason.summary}`),
+      ""
+    );
+  }
+  if (plan.errors.length > 0) {
+    lines.push(
+      `### ${plural(plan.errors.length, "claim")} could not be read`,
+      "",
+      ...plan.errors.map(
+        (error2) => `- \`${error2.reason}\`: "${error2.text}" (chapter ${error2.chapter}, ${error2.repository}/${error2.source}). ${error2.detail}`
+      ),
+      ""
+    );
+  }
+  lines.push(verdict.failed ? verdict.failure ?? "" : escalationNote(verdict));
+  return lines.join("\n").trimEnd() + "\n";
+}
+function escalationNote(verdict) {
+  const unescalated = verdict.drift > 0 ? "This check is green because escalation is off" : "This check is green because no claim drifted";
+  return `${unescalated}. Set \`fail-on: drift\` to fail on drift, or \`fail-on: any\` to fail on anything this run could not vouch for.`;
+}
+function unreachableLabel(reason) {
+  return reason === "no_line" ? "The cited value is gone, so there is no line to annotate" : "Cited in another repository, which this run does not check out";
+}
+function plural(count, noun) {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+// src/inputs.ts
 var ENTRY_TYPES = [
   "feature",
   "fix",
@@ -25499,15 +25689,25 @@ var ENTRY_TYPES = [
   "breaking",
   "announcement"
 ];
+var MODES = ["publish", "verify"];
 function readInputs() {
   const apiKey = core.getInput("api-key", { required: true }).trim();
+  core.setSecret(apiKey);
+  const githubToken = core.getInput("github-token").trim();
+  if (githubToken) core.setSecret(githubToken);
   const project = core.getInput("project", { required: true }).trim();
+  const modeRaw = (core.getInput("mode") || "publish").trim().toLowerCase();
+  const failOn = parseFailOn(core.getInput("fail-on"));
   const aiSummarize = readBool("ai-summarize", false);
   const notifySubscribers = readBool("notify-subscribers", false);
+  const skipPrerelease = readBool("skip-prerelease", false);
   const entryTypeRaw = (core.getInput("entry-type") || "feature").trim().toLowerCase();
   const apiUrl = (core.getInput("api-url") || "https://deploylog.dev").trim().replace(/\/+$/, "");
   if (!apiKey.startsWith("dk_")) {
     throw new Error('Invalid api-key. Keys issued by DeployLog start with "dk_".');
+  }
+  if (!isMode(modeRaw)) {
+    throw new Error(`Invalid mode "${modeRaw}". Must be one of: ${MODES.join(", ")}`);
   }
   if (!isEntryType(entryTypeRaw)) {
     throw new Error(
@@ -25517,11 +25717,18 @@ function readInputs() {
   return {
     apiKey,
     project,
+    mode: modeRaw,
+    failOn,
+    githubToken,
     aiSummarize,
     notifySubscribers,
     entryType: entryTypeRaw,
-    apiUrl
+    apiUrl,
+    skipPrerelease
   };
+}
+function isMode(value) {
+  return MODES.includes(value);
 }
 function isEntryType(value) {
   return ENTRY_TYPES.includes(value);
@@ -25547,7 +25754,7 @@ var ApiError = class extends Error {
 };
 function createApiClient(config) {
   const fetchFn = config.fetchFn ?? fetch;
-  const userAgent = config.userAgent ?? "deploylog-action/1.0";
+  const userAgent = config.userAgent ?? "deploylog-action/1.2";
   async function request(path, init) {
     const res = await fetchFn(`${config.baseUrl}${path}`, {
       ...init,
@@ -25589,7 +25796,13 @@ function createApiClient(config) {
       body: JSON.stringify(input)
     });
   }
-  return { createEntry, summarize };
+  async function verifyManual(input) {
+    return request("/api/cli/manual/verify", {
+      method: "POST",
+      body: JSON.stringify(input)
+    });
+  }
+  return { createEntry, summarize, verifyManual };
 }
 function extractError(payload) {
   if (!payload || typeof payload !== "object") return {};
@@ -25613,11 +25826,14 @@ function extractData(payload) {
 }
 
 // src/release.ts
-var SEMVER = /^v?(\d+\.\d+\.\d+(?:[-+][\w.-]+)?)$/;
+var SEMVER = /^v?(\d+\.\d+\.\d+)(?:-([\w.-]+))?(?:\+([\w.-]+))?$/;
 function extractVersion(tag) {
-  if (!tag) return null;
-  const match = tag.match(SEMVER);
-  return match?.[1] ?? null;
+  if (!tag) return "";
+  const match = tag.trim().match(SEMVER);
+  if (!match) return "";
+  const [, release, prerelease] = match;
+  if (prerelease) return "";
+  return release ?? "";
 }
 function deriveEntryFromRelease(release) {
   const tag = release.tag_name?.trim() ?? "";
@@ -25628,8 +25844,73 @@ function deriveEntryFromRelease(release) {
   return { title, body, version };
 }
 
+// src/verify.ts
+async function runVerify(opts) {
+  const { inputs, context: context2, logger } = opts;
+  const factory = opts.clientFactory ?? createApiClient;
+  const client = factory({ baseUrl: inputs.apiUrl, apiKey: inputs.apiKey });
+  const report = await client.verifyManual({
+    project: inputs.project,
+    repository: context2.repository,
+    ref: context2.ref,
+    changedFiles: context2.changedFiles
+  }).catch((err) => err instanceof Error ? err : new Error(String(err)));
+  if (report instanceof Error) {
+    logger.setOutput("check-failed", "true");
+    logger.setFailed(`Could not verify the manual: ${report.message}`);
+    return;
+  }
+  const view = report;
+  const plan = planAnnotations(view, { repository: context2.repository });
+  const verdict = decideVerdict(view, inputs.failOn);
+  const level = verdict.failed ? "error" : "warning";
+  for (const annotation of plan.annotations.slice(0, ANNOTATION_LIMIT)) {
+    logger.annotate(annotation, level);
+  }
+  for (const error2 of plan.errors) {
+    logger.warning(
+      `Manual claim could not be read (${error2.reason}): "${error2.text}" cites ${error2.repository}/${error2.source}. ${error2.detail}`
+    );
+  }
+  logger.setOutput("drift-count", String(verdict.drift));
+  logger.setOutput("error-count", String(view.errorCount));
+  logger.setOutput("unanchored-count", String(view.unanchoredCount));
+  logger.setOutput("untriggered-count", String(view.untriggeredCount));
+  logger.setOutput("low-coverage-chapters", view.lowCoverageChapters.join(","));
+  logger.setOutput("check-failed", String(verdict.failed));
+  const summary2 = renderSummary(view, plan, verdict);
+  if (summary2) await logger.summary(summary2);
+  if (verdict.failed) {
+    logger.setFailed(verdict.failure ?? "Manual check failed.");
+    return;
+  }
+  if (verdict.drift === 0 && verdict.reasons.length === 0) {
+    logger.info("Manual check: no drift, and nothing this run could not vouch for.");
+    return;
+  }
+  const notClean = verdict.reasons.length ? ` ${verdict.reasons.length} reason${verdict.reasons.length === 1 ? "" : "s"} this run could not vouch for the manual (see the job summary).` : "";
+  logger.info(
+    `Manual check: ${verdict.drift} drifted, ${plan.annotations.length} annotated inline.${notClean} The check is green because escalation is off.`
+  );
+}
+
 // src/run.ts
 async function run(opts) {
+  if (opts.inputs.mode === "verify") {
+    if (!opts.verify) {
+      opts.logger.setFailed("mode is `verify` but this run has no repository and ref to verify at.");
+      return;
+    }
+    return runVerify({
+      inputs: opts.inputs,
+      context: opts.verify,
+      logger: opts.logger,
+      ...opts.clientFactory ? { clientFactory: opts.clientFactory } : {}
+    });
+  }
+  return runPublish(opts);
+}
+async function runPublish(opts) {
   const { inputs, release, logger } = opts;
   if (!release) {
     logger.setFailed(
@@ -25639,6 +25920,10 @@ async function run(opts) {
   }
   if (release.draft) {
     logger.info("Release is marked as draft. Skipping DeployLog entry.");
+    return;
+  }
+  if (inputs.skipPrerelease && release.prerelease) {
+    logger.info("Release is a prerelease and skip-prerelease is set. Skipping DeployLog entry.");
     return;
   }
   const derived = deriveEntryFromRelease(release);
@@ -25703,22 +25988,140 @@ function errorMessage(err) {
   return String(err);
 }
 
+// src/verify-context.ts
+var FULL_SHA = /^[0-9a-f]{40}$/;
+var CHANGED_FILE_CAP = 3e3;
+async function collectChangedPaths(listFiles, pullNumber) {
+  const files = await listFiles(pullNumber);
+  if (files.length >= CHANGED_FILE_CAP) return { kind: "untrusted", reason: "cap" };
+  if (files.length === 0) return { kind: "untrusted", reason: "empty" };
+  const paths = /* @__PURE__ */ new Set();
+  for (const file of files) {
+    paths.add(file.filename);
+    if (file.previous_filename) paths.add(file.previous_filename);
+  }
+  return { kind: "paths", paths: [...paths] };
+}
+function toWorkflowRun(event) {
+  const pr = event.pullRequest;
+  const headSha = pr?.head?.sha;
+  if (pr && !headSha) {
+    throw new Error(
+      `This \`${event.eventName}\` payload carries pull request #${pr.number} with no head sha. Refusing to fall back to the merge commit: findings computed there land on lines outside the pull request's diff, and GitHub drops those annotations without reporting anything.`
+    );
+  }
+  return {
+    repository: event.repository,
+    eventName: event.eventName,
+    sha: event.sha,
+    pullRequest: pr && headSha ? { number: pr.number, headSha } : null
+  };
+}
+async function resolveVerifyContext(run2, listFiles, logger) {
+  const ref = run2.pullRequest ? run2.pullRequest.headSha : run2.sha;
+  if (!FULL_SHA.test(ref)) {
+    throw new Error(
+      `Could not determine a full commit sha for this run (got "${ref}"). The verify endpoint pins the repository to this ref and rejects anything that is not a 40-character sha.`
+    );
+  }
+  const changedFiles = await resolveChangedFiles(run2, listFiles, logger);
+  return { repository: run2.repository, ref, changedFiles };
+}
+async function resolveChangedFiles(run2, listFiles, logger) {
+  if (!run2.pullRequest) {
+    logger.info(
+      `This is a \`${run2.eventName}\` run, not a pull request, so there is no file list to scope the check to. Verifying the whole manual.`
+    );
+    return null;
+  }
+  if (!listFiles) {
+    logger.warning(
+      "No github-token was provided, so the changed files could not be read and the whole manual is being verified. Pass `github-token: ${{ github.token }}` with `permissions: pull-requests: read` to scope the check to this pull request."
+    );
+    return null;
+  }
+  let result;
+  try {
+    result = await collectChangedPaths(listFiles, run2.pullRequest.number);
+  } catch (err) {
+    logger.warning(
+      `Could not read the files of pull request #${run2.pullRequest.number} (${err instanceof Error ? err.message : String(err)}). Verifying the whole manual.`
+    );
+    return null;
+  }
+  if (result.kind === "untrusted") {
+    logger.warning(`${untrustedMessage(result.reason, run2.pullRequest.number)} Verifying the whole manual.`);
+    return null;
+  }
+  logger.info(
+    `Verifying claims that cite any of the ${result.paths.length} files this pull request changes.`
+  );
+  return result.paths;
+}
+function untrustedMessage(reason, pullNumber) {
+  if (reason === "cap") {
+    return `Pull request #${pullNumber} touches at least ${CHANGED_FILE_CAP} files, which is where GitHub stops listing them, so the list would be partial.`;
+  }
+  return `Pull request #${pullNumber} reports no changed files, so there is nothing to scope the check to. Scoping to an empty list would evaluate no claim at all and report a clean manual.`;
+}
+
 // src/main.ts
+function makeLogger() {
+  return {
+    info: (msg) => core2.info(msg),
+    warning: (msg) => core2.warning(msg),
+    debug: (msg) => core2.debug(msg),
+    setOutput: (name, value) => core2.setOutput(name, value),
+    setFailed: (msg) => core2.setFailed(msg),
+    annotate: (annotation, level) => {
+      const properties = {
+        file: annotation.file,
+        startLine: annotation.line,
+        title: annotation.title
+      };
+      if (level === "error") core2.error(annotation.message, properties);
+      else core2.warning(annotation.message, properties);
+    },
+    summary: async (markdown) => {
+      try {
+        await core2.summary.addRaw(markdown).write();
+      } catch (err) {
+        core2.warning(
+          `Could not write the job summary (${err instanceof Error ? err.message : String(err)}). The findings above are the full report for this run.`
+        );
+      }
+    }
+  };
+}
+async function buildVerifyContext(githubToken) {
+  const { owner, repo } = github.context.repo;
+  const pr = github.context.payload.pull_request;
+  const listFiles = githubToken ? async (pullNumber) => {
+    const octokit = github.getOctokit(githubToken);
+    return octokit.paginate(octokit.rest.pulls.listFiles, {
+      owner,
+      repo,
+      pull_number: pullNumber,
+      per_page: 100
+    });
+  } : null;
+  const run2 = toWorkflowRun({
+    repository: `${owner}/${repo}`,
+    eventName: github.context.eventName,
+    sha: github.context.sha,
+    pullRequest: pr
+  });
+  return resolveVerifyContext(run2, listFiles, {
+    info: (msg) => core2.info(msg),
+    warning: (msg) => core2.warning(msg)
+  });
+}
 async function main() {
   try {
     const inputs = readInputs();
     const release = github.context.payload.release ?? null;
-    await run({
-      inputs,
-      release,
-      logger: {
-        info: (msg) => core2.info(msg),
-        warning: (msg) => core2.warning(msg),
-        debug: (msg) => core2.debug(msg),
-        setOutput: (name, value) => core2.setOutput(name, value),
-        setFailed: (msg) => core2.setFailed(msg)
-      }
-    });
+    const verify = inputs.mode === "verify" ? await buildVerifyContext(inputs.githubToken) : null;
+    await run({ inputs, release, verify, logger: makeLogger() });
   } catch (err) {
     core2.setFailed(err instanceof Error ? err.message : String(err));
   }

@@ -15,6 +15,70 @@ function makeFetch(
 }
 
 describe('createApiClient', () => {
+  it('posts the verify request verbatim and unwraps the report', async () => {
+    const report = {
+      chapters: [],
+      confirmedCount: 0,
+      errorCount: 0,
+      unanchoredCount: 0,
+      evaluatedCount: 3,
+      skippedCount: 1,
+      lowCoverageChapters: [],
+      untriggeredCount: 2,
+      unverifiable: true,
+    }
+    const fetchFn = makeFetch({ body: { data: report } })
+    const client = createApiClient({
+      baseUrl: 'https://deploylog.dev',
+      apiKey: 'dk_test',
+      fetchFn,
+    })
+
+    const result = await client.verifyManual({
+      project: 'my-app',
+      repository: 'marko-builds/deploylog',
+      ref: 'a'.repeat(40),
+      changedFiles: ['src/lib/limits.ts'],
+    })
+
+    expect(result.untriggeredCount).toBe(2)
+    const mockFetch = fetchFn as unknown as ReturnType<typeof vi.fn>
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('https://deploylog.dev/api/cli/manual/verify')
+    expect(init.method).toBe('POST')
+    // The request schema is `.strict()`: an extra field is a 400, not a strip.
+    // Asserting the exact key set is the only thing that catches a helpful
+    // addition here before a live run does.
+    expect(Object.keys(JSON.parse(init.body as string)).sort()).toEqual([
+      'changedFiles',
+      'project',
+      'ref',
+      'repository',
+    ])
+  })
+
+  it('surfaces a verify 404 as an ApiError carrying the status', async () => {
+    const fetchFn = makeFetch({
+      ok: false,
+      status: 404,
+      body: { error: { code: 'NOT_FOUND', message: "Project 'my-app' has no manual to verify" } },
+    })
+    const client = createApiClient({
+      baseUrl: 'https://deploylog.dev',
+      apiKey: 'dk_test',
+      fetchFn,
+    })
+
+    await expect(
+      client.verifyManual({
+        project: 'my-app',
+        repository: 'marko-builds/deploylog',
+        ref: 'a'.repeat(40),
+        changedFiles: null,
+      }),
+    ).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' })
+  })
+
   it('sends Bearer auth and JSON body to createEntry', async () => {
     const fetchFn = makeFetch({
       body: {
@@ -69,7 +133,7 @@ describe('createApiClient', () => {
       title: 't',
       body_markdown: 'b',
       entry_type: 'fix',
-      version: null,
+      version: '',
       publish: false,
     })
     const mockFetch = fetchFn as unknown as ReturnType<typeof vi.fn>
@@ -108,7 +172,7 @@ describe('createApiClient', () => {
         title: 't',
         body_markdown: 'b',
         entry_type: 'feature',
-        version: null,
+        version: '',
         publish: false,
       }),
     ).rejects.toBeInstanceOf(ApiError)
@@ -144,7 +208,7 @@ describe('createApiClient', () => {
       title: 't',
       body_markdown: 'b',
       entry_type: 'feature',
-      version: null,
+      version: '',
       publish: false,
     })
     expect(res.id).toBe('entry-raw')

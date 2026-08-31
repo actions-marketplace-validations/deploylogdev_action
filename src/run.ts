@@ -3,6 +3,9 @@ import type { ApiClientConfig } from './api.js'
 import { createApiClient } from './api.js'
 import type { ReleasePayload } from './release.js'
 import { deriveEntryFromRelease } from './release.js'
+import type { Annotation } from './annotate.js'
+import type { VerifyContext } from './verify-context.js'
+import { runVerify } from './verify.js'
 
 export interface ActionLogger {
   info(msg: string): void
@@ -10,16 +13,38 @@ export interface ActionLogger {
   debug(msg: string): void
   setOutput(name: string, value: string): void
   setFailed(msg: string): void
+  /** One inline annotation on a line of the diff. */
+  annotate(annotation: Annotation, level: 'warning' | 'error'): void
+  /** The job summary. Markdown, written once. */
+  summary(markdown: string): Promise<void> | void
 }
 
 export interface RunOptions {
   inputs: ActionInputs
   release: ReleasePayload | null
+  /** Present only in verify mode; the caller resolves it from the event. */
+  verify?: VerifyContext | null
   logger: ActionLogger
   clientFactory?: (config: ApiClientConfig) => ReturnType<typeof createApiClient>
 }
 
 export async function run(opts: RunOptions): Promise<void> {
+  if (opts.inputs.mode === 'verify') {
+    if (!opts.verify) {
+      opts.logger.setFailed('mode is `verify` but this run has no repository and ref to verify at.')
+      return
+    }
+    return runVerify({
+      inputs: opts.inputs,
+      context: opts.verify,
+      logger: opts.logger,
+      ...(opts.clientFactory ? { clientFactory: opts.clientFactory } : {}),
+    })
+  }
+  return runPublish(opts)
+}
+
+async function runPublish(opts: RunOptions): Promise<void> {
   const { inputs, release, logger } = opts
 
   if (!release) {
@@ -32,6 +57,11 @@ export async function run(opts: RunOptions): Promise<void> {
 
   if (release.draft) {
     logger.info('Release is marked as draft. Skipping DeployLog entry.')
+    return
+  }
+
+  if (inputs.skipPrerelease && release.prerelease) {
+    logger.info('Release is a prerelease and skip-prerelease is set. Skipping DeployLog entry.')
     return
   }
 

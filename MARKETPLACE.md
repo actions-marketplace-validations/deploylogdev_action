@@ -1,8 +1,14 @@
 # GitHub Marketplace Listing
 
+> **Read this first (2026-08-24).** A GitHub *Action* listing has no editable Short/Long
+> Description or category fields; those belong to GitHub *App* listings. The live page
+> https://github.com/marketplace/actions/publish-to-deploylog renders `action.yml`'s `description`
+> as the tagline and `README.md` as the body, verified by fetching the page. So this file is a copy
+> workbook, not a form to paste from: `action.yml` and `README.md` are the listing.
+
 ## Short Description (max 80 characters)
 
-Publish changelog entries from GitHub Releases. AI-polished release notes.
+Publish changelogs from Releases. Check your manual still matches the code.
 
 ## Primary Category
 
@@ -16,9 +22,17 @@ Utilities
 
 ### Ship the update. Skip the busywork.
 
-DeployLog turns your GitHub Releases into beautiful changelog entries on your product's website — automatically. When you publish a release, this Action creates a changelog entry on DeployLog, which then appears in your embeddable widget, hosted changelog page, and subscriber email digests.
+DeployLog turns your GitHub Releases into beautiful changelog entries on your product's website, automatically. When you publish a release, this Action creates a changelog entry on DeployLog, which then appears in your embeddable widget, hosted changelog page, and subscriber email digests.
 
 Optionally, use AI to transform technical commit messages into user-friendly release notes your customers will actually read.
+
+### Docs go stale quietly.
+
+A constant changes, the sentence describing it does not, and nobody finds out until a customer reads the old number. Nothing fails. Nothing is flagged. The doc just stops being true.
+
+Set `mode: verify` and this Action checks your DeployLog manual against the code it cites, on every pull request. When a cited value moves, the finding lands as an annotation on the changed line, next to the change that caused it.
+
+It starts quiet. On the default setting the check stays green and the findings are informational, so adding it to a busy repository breaks nothing on day one. When you trust it, `fail-on: drift` makes stale docs fail the build.
 
 ### Features
 
@@ -27,6 +41,9 @@ Optionally, use AI to transform technical commit messages into user-friendly rel
 - Notify email subscribers automatically
 - Tag entries by type (feature, fix, improvement, breaking change)
 - Zero configuration beyond an API key
+- Verify your manual against the code it cites, on every pull request
+- Findings appear inline on the changed line, not in a report nobody opens
+- Green by default, so it cannot break an existing build the day you add it
 
 ### Quick Start
 
@@ -52,15 +69,20 @@ jobs:
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `api-key` | Yes | — | Your DeployLog API key |
-| `project` | Yes | — | Project slug from your DeployLog dashboard |
-| `ai-summarize` | No | `false` | Use AI to rewrite release notes for end users |
-| `notify-subscribers` | No | `false` | Send email digest to subscribers on publish |
-| `entry-type` | No | `feature` | Entry type: feature, fix, improvement, breaking |
+| `api-key` | Yes | | Your DeployLog API key |
+| `project` | Yes | | Project slug from your DeployLog dashboard |
+| `mode` | No | `publish` | `publish` a release as a changelog entry, or `verify` your manual against the code |
+| `ai-summarize` | No | `false` | Publish mode. Use AI to rewrite release notes for end users |
+| `notify-subscribers` | No | `false` | Publish mode. Send email digest to subscribers on publish |
+| `entry-type` | No | `feature` | Publish mode. feature, fix, improvement, breaking |
+| `fail-on` | No | `none` | Verify mode. `none`, `drift`, or `any` |
+| `github-token` | No | | Verify mode. Scopes the check to a pull request's changed files |
+| `skip-prerelease` | No | `false` | Publish mode. Skip GitHub prereleases |
+| `api-url` | No | | Override the API base URL for staging or self-hosted |
 
 ### Requirements
 
-- A free DeployLog account — sign up at [deploylog.dev](https://deploylog.dev)
+- A free DeployLog account. Sign up at [deploylog.dev](https://deploylog.dev)
 - A DeployLog API key stored as a GitHub Secret (`DEPLOYLOG_API_KEY`)
 
 ### How It Works
@@ -74,7 +96,7 @@ jobs:
 
 ### Links
 
-- **Documentation:** [deploylog.dev/docs/github-action](https://deploylog.dev/docs/github-action)
+- **Documentation:** [github.com/deploylogdev/action](https://github.com/deploylogdev/action#readme)
 - **Support:** [github.com/deploylogdev/action/issues](https://github.com/deploylogdev/action/issues)
 - **Privacy Policy:** [deploylog.dev/privacy](https://deploylog.dev/privacy)
 - **Terms of Service:** [deploylog.dev/terms](https://deploylog.dev/terms)
