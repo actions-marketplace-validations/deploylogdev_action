@@ -63,6 +63,18 @@ describe('action.yml', () => {
     expect(target).toMatch(/^node\d+$/)
     expect(target).toBe(runsUsing())
   })
+
+  it('is tested in CI on the runtime it declares', () => {
+    // CI runs the tests and rebuilds dist for the dist check; both should
+    // happen on the Node major consumers run the action on.
+    const ci = readFileSync(fileURLToPath(new URL('../.github/workflows/ci.yml', import.meta.url)), 'utf8')
+    const versions = [...ci.matchAll(/^\s+node-version:\s*['"]?([^'"\s]+)['"]?\s*$/gm)].map((m) => `node${m[1]}`)
+
+    expect(versions.length).toBeGreaterThan(0)
+    for (const version of versions) {
+      expect(version).toBe(runsUsing())
+    }
+  })
 })
 
 /** The `using:` value inside the top-level `runs:` block of action.yml. */
