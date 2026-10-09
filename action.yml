@@ -74,5 +74,5 @@ outputs:
     description: Verify mode. Whether this run failed the check (true/false). The count outputs above are empty when the run could not reach DeployLog at all, because this run received no report to count.
 
 runs:
-  using: node20
+  using: node24
   main: dist/index.js

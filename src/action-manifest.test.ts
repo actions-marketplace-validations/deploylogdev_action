@@ -45,4 +45,23 @@ describe('action.yml', () => {
       expect(declared.has(name), `getInput('${name}') has no declaration in action.yml`).toBe(true)
     }
   })
+
+  it('runs on node24', () => {
+    // GitHub forces node20 actions onto Node 24 and prints a deprecation warning
+    // on every consumer run, so the manifest declares the runtime it gets.
+    expect(runsUsing()).toBe('node24')
+  })
 })
+
+/** The `using:` value inside the top-level `runs:` block of action.yml. */
+function runsUsing(): string | undefined {
+  const lines = readFileSync(MANIFEST, 'utf8').split('\n')
+  const start = lines.findIndex((line) => /^runs:\s*$/.test(line))
+  if (start === -1) return undefined
+  for (const line of lines.slice(start + 1)) {
+    if (/^\S/.test(line)) break
+    const value = /^\s+using:\s*['"]?([^'"\s]+)['"]?\s*$/.exec(line)?.[1]
+    if (value) return value
+  }
+  return undefined
+}
