@@ -51,6 +51,18 @@ describe('action.yml', () => {
     // on every consumer run, so the manifest declares the runtime it gets.
     expect(runsUsing()).toBe('node24')
   })
+
+  it('bundles dist for the runtime it declares', () => {
+    // dist/index.js is what GitHub executes; an esbuild target older than the
+    // runtime lowers syntax for a Node the action never runs on.
+    const pkg = JSON.parse(readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8')) as {
+      scripts: Record<string, string>
+    }
+    const target = /--target=(\S+)/.exec(pkg.scripts['build'] ?? '')?.[1]
+
+    expect(target).toMatch(/^node\d+$/)
+    expect(target).toBe(runsUsing())
+  })
 })
 
 /** The `using:` value inside the top-level `runs:` block of action.yml. */
