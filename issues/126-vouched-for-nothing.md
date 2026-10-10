@@ -1,7 +1,7 @@
 # 126 item 4: the Action says when a run vouched for nothing
 
-**Status:** in review. Built on branch `feat/126-vouched-summary`; the pull request is not opened
-yet. Merging is Marko's, after CI.
+**Status:** in review as PR #21 (opened 2026-10-10 from branch `feat/126-vouched-summary`, ready,
+not draft). Merging is Marko's, after CI.
 **Type:** AFK
 **Lane:** deploylog-action
 **Parent:** item 4 of `deploylog/issues/126-manual-verification-confirms-nothing.md`, read with its
