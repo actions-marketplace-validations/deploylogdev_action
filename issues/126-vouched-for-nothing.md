@@ -155,8 +155,8 @@ Dated 2026-10-10. Each is reversible and none blocks the merge.
    above it, rather than clamped to 0.
 10. `docs/manual/06-github.md` is not edited. It is written by DeployLog's own chapter pull requests
     (inferred from its history: bfe148d and f56fb59, "docs(manual): update chapter 06, GitHub").
-    Its sentence "On a clean run, the summary is empty, and nothing is written." stays true if a
-    run that vouched for nothing is not a clean run, which is how this change reads it.
+    This change drifts one of its claims, and the code is not bent to keep the old anchor matching;
+    see "The manual drift this change causes" below.
 11. This file is named for its deploylog issue number, like the issue docs pruned in 0f11673.
 
 ## Marko decisions
@@ -172,19 +172,39 @@ Dated 2026-10-10. Each is reversible and none blocks the merge.
 - **Should `fail-on: drift` fail a run that read nothing, as the CLI's default now does?** Not done
   here (default 1). Yes means a consumer on `drift` with a broken checker goes red on upgrade.
 - **Outputs.** Add `evaluated-count` and `vouched-count` if a consumer asks to gate on them.
+- **Update chapter 06 after the release.** Its claim on the empty summary drifts with this change;
+  details in the next section.
+
+## The manual drift this change causes
+
+The pull request's `Manual check` run logged `Manual check: 1 drifted, 0 annotated inline.`
+(measured: run 38039314103 on 7aa3786). A read-only `deploylog manual verify --project deploylog
+--changed-from origin/main --fail-on none` at the same sha names it (measured):
+
+    06 GitHub  CONFIRMED  confirmed 1 / errors 0 / untriggered 0 / touched 2
+      drift  src/verdict.ts  "On a clean run the summary is empty and nothing is written."  "if (verdict.drift === 0 && verdict.reasons.length === 0) return ''" no longer appears in src/verdict.ts.
+    Summary: confirmed 1 / errors 0 / unanchored 0 / evaluated 20 / skipped 436 / vouched 19
+
+This is a true finding, not noise. The claim's anchor is the old early return, and by that
+anchor's own condition a run that evaluated nothing counted as clean; it now writes a summary.
+Nesting the old line under a new guard would keep the anchor matching while the behaviour it
+describes changed, which is the false clean the check exists to catch, so the code is left as it
+should read. After the release, chapter 06 needs its sentence re-anchored to the new condition,
+and probably a sentence saying that a run which vouched for nothing gets a summary (Marko step:
+regenerate or edit chapter 06 in DeployLog, which then opens its own chapter pull request here).
+The check stays green meanwhile (`fail-on: none`).
 
 ## Not verified
 
-1. CI on Linux, including the dist check. The local clean build is byte-identical across two runs
-   (measured); the pull request's CI run is the real measurement.
+1. ~~CI on Linux, including the dist check.~~ Now measured: CI run 38039314205 on 7aa3786, the
+   `test` job (Node 24, typecheck, tests, dist check) passed.
 2. How the job summary renders on github.com. The markdown is pinned by unit-test strings and was
    read from a scratch render of every case (measured); no live run shows it yet.
 3. The pull request's own `Manual check` run does not exercise this code. `manual-check.yml` pins
    `deploylogdev/action@v1`, the released v1.2.2 (measured: the workflow file pins `@v1`, and
-   `git ls-remote` shows `v1` and `v1.2.2` on the same sha, b95e750), so the new lines appear on
-   this repository's checks only after the release and the `v1` move (inferred).
-4. Whether any of chapter 06's claims cite lines this diff changed. That `Manual check` run would
-   annotate them if so, and it stays green either way (`fail-on: none`).
+   `git ls-remote` shows `v1` and `v1.2.2` on the same sha, b95e750). Its log line above is in the
+   old format, with no tally (measured), so the new lines appear on this repository's checks only
+   after the release and the `v1` move (inferred).
 
 ## Pull request
 
