@@ -37,6 +37,7 @@ function makeReport(
     confirmedCount: chapters.reduce((n, c) => n + c.confirmed.length, 0),
     errorCount: 0,
     unanchoredCount: 0,
+    evaluatedCount: chapters.reduce((n, c) => n + c.confirmed.length + c.errors.length, 0),
     lowCoverageChapters: [],
     untriggeredCount: 0,
     ...counts,

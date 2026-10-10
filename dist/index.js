@@ -25565,11 +25565,36 @@ function isFailOn(value) {
 }
 function decideVerdict(counts, failOn) {
   const drift = counts.confirmedCount;
+  const evaluated = counts.evaluatedCount;
+  const vouched = evaluated - drift - counts.errorCount;
+  const nothing = vouchedNothingFor(counts, vouched);
   const reasons = notCleanReasons(counts);
   const failsOnDrift = drift > 0 && (failOn === "drift" || failOn === "any");
   const failsOnUnverifiable = reasons.length > 0 && failOn === "any";
   const failed = failsOnDrift || failsOnUnverifiable;
-  return { drift, reasons, failed, failure: failed ? failureLine(drift, reasons) : null };
+  return {
+    drift,
+    tally: `${plural(evaluated, "claim")} evaluated, ${vouched} vouched for, ${drift} drifted, ${counts.errorCount} could not be read.`,
+    vouchedNothing: nothing ? `This run vouched for nothing: ${nothing.why}.` : null,
+    reasons,
+    failed,
+    failure: failed ? failureLine(drift, reasons, nothing) : null
+  };
+}
+function vouchedNothingFor(counts, vouched) {
+  if (vouched < 0) {
+    const why = `the report's own counts do not add up (evaluated ${counts.evaluatedCount}, drifted ${counts.confirmedCount}, unreadable ${counts.errorCount})`;
+    return { why, failure: `Manual check failed: this run vouched for nothing, because ${why}.` };
+  }
+  if (counts.evaluatedCount === 0) return { why: "it evaluated no claims", failure: null };
+  if (counts.errorCount === counts.evaluatedCount) {
+    const claims = plural(counts.evaluatedCount, "claim");
+    return {
+      why: `not one of the ${claims} it evaluated could be read`,
+      failure: `Manual check failed: this run vouched for none of the ${claims} it evaluated, because not one of them could be read.`
+    };
+  }
+  return null;
 }
 function notCleanReasons(counts) {
   const reasons = [];
@@ -25603,7 +25628,8 @@ function notCleanReasons(counts) {
   }
   return reasons;
 }
-function failureLine(drift, reasons) {
+function failureLine(drift, reasons, nothing) {
+  if (drift === 0 && nothing?.failure) return nothing.failure;
   if (drift > 0 && reasons.length > 0) {
     return `Manual check failed: ${plural(drift, "claim")} drifted, and this run could not vouch for the rest of the manual.`;
   }
@@ -25613,8 +25639,12 @@ function failureLine(drift, reasons) {
   return `Manual check failed: no drift was found, but this run could not vouch for the manual.`;
 }
 function renderSummary(report, plan, verdict) {
-  if (verdict.drift === 0 && verdict.reasons.length === 0) return "";
+  if (verdict.drift === 0 && verdict.reasons.length === 0 && verdict.vouchedNothing === null) {
+    return "";
+  }
   const lines = ["## DeployLog manual check", ""];
+  if (verdict.vouchedNothing) lines.push(`**${verdict.vouchedNothing}**`, "");
+  lines.push(verdict.tally, "");
   if (verdict.drift > 0) {
     const shown = Math.min(plan.annotations.length, ANNOTATION_LIMIT);
     const overflow = plan.annotations.slice(ANNOTATION_LIMIT);
@@ -25634,7 +25664,7 @@ function renderSummary(report, plan, verdict) {
         ""
       );
     }
-  } else {
+  } else if (!verdict.vouchedNothing) {
     lines.push("**No drift found.**", "");
   }
   if (plan.unreachable.length > 0) {
@@ -25671,7 +25701,8 @@ function renderSummary(report, plan, verdict) {
   return lines.join("\n").trimEnd() + "\n";
 }
 function escalationNote(verdict) {
-  const unescalated = verdict.drift > 0 ? "This check is green because escalation is off" : "This check is green because no claim drifted";
+  const unescalated = verdict.drift > 0 ? "This check is green because escalation is off" : verdict.vouchedNothing ? "This check is green, but not because anything was verified" : "This check is green because no claim drifted";
+  if (verdict.drift === 0 && verdict.reasons.length === 0) return `${unescalated}.`;
   return `${unescalated}. Set \`fail-on: drift\` to fail on drift, or \`fail-on: any\` to fail on anything this run could not vouch for.`;
 }
 function unreachableLabel(reason) {
@@ -25878,19 +25909,22 @@ async function runVerify(opts) {
   logger.setOutput("untriggered-count", String(view.untriggeredCount));
   logger.setOutput("low-coverage-chapters", view.lowCoverageChapters.join(","));
   logger.setOutput("check-failed", String(verdict.failed));
+  logger.info(`Manual check: ${verdict.tally}`);
+  if (verdict.vouchedNothing) logger.info(verdict.vouchedNothing);
   const summary2 = renderSummary(view, plan, verdict);
   if (summary2) await logger.summary(summary2);
   if (verdict.failed) {
     logger.setFailed(verdict.failure ?? "Manual check failed.");
     return;
   }
-  if (verdict.drift === 0 && verdict.reasons.length === 0) {
+  if (verdict.drift === 0 && verdict.reasons.length === 0 && verdict.vouchedNothing === null) {
     logger.info("Manual check: no drift, and nothing this run could not vouch for.");
     return;
   }
   const notClean = verdict.reasons.length ? ` ${verdict.reasons.length} reason${verdict.reasons.length === 1 ? "" : "s"} this run could not vouch for the manual (see the job summary).` : "";
+  const green = verdict.drift === 0 && verdict.vouchedNothing ? " The check is green, but not because anything was verified." : " The check is green because escalation is off.";
   logger.info(
-    `Manual check: ${verdict.drift} drifted, ${plan.annotations.length} annotated inline.${notClean} The check is green because escalation is off.`
+    `Manual check: ${verdict.drift} drifted, ${plan.annotations.length} annotated inline.${notClean}${green}`
   );
 }
 
