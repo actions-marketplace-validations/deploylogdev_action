@@ -92,6 +92,13 @@ export async function runVerify(opts: VerifyRunOptions): Promise<void> {
   logger.setOutput('low-coverage-chapters', view.lowCoverageChapters.join(','))
   logger.setOutput('check-failed', String(verdict.failed))
 
+  // Logged on every run that got a report, green or red, and only then: the
+  // transport-failure path above has no counts, and a zero tally there would be
+  // a claim about the manual. Info, not a warning: a warning is an annotation,
+  // and annotations are the budget the drift findings above spend.
+  logger.info(`Manual check: ${verdict.tally}`)
+  if (verdict.vouchedNothing) logger.info(verdict.vouchedNothing)
+
   const summary = renderSummary(view, plan, verdict)
   if (summary) await logger.summary(summary)
 
@@ -100,7 +107,7 @@ export async function runVerify(opts: VerifyRunOptions): Promise<void> {
     return
   }
 
-  if (verdict.drift === 0 && verdict.reasons.length === 0) {
+  if (verdict.drift === 0 && verdict.reasons.length === 0 && verdict.vouchedNothing === null) {
     logger.info('Manual check: no drift, and nothing this run could not vouch for.')
     return
   }
@@ -111,8 +118,11 @@ export async function runVerify(opts: VerifyRunOptions): Promise<void> {
   const notClean = verdict.reasons.length
     ? ` ${verdict.reasons.length} reason${verdict.reasons.length === 1 ? '' : 's'} this run could not vouch for the manual (see the job summary).`
     : ''
+  const green =
+    verdict.drift === 0 && verdict.vouchedNothing
+      ? ' The check is green, but not because anything was verified.'
+      : ' The check is green because escalation is off.'
   logger.info(
-    `Manual check: ${verdict.drift} drifted, ${plan.annotations.length} annotated inline.${notClean}` +
-      ' The check is green because escalation is off.',
+    `Manual check: ${verdict.drift} drifted, ${plan.annotations.length} annotated inline.${notClean}${green}`,
   )
 }

@@ -105,6 +105,8 @@ function withDrift(): VerificationReport {
 function withDriftCount(n: number): VerificationReport {
   return report({
     confirmedCount: n,
+    // Four that held plus the n that drifted, so the counts add up whatever n is.
+    evaluatedCount: n + 4,
     unverifiable: true,
     chapters: [
       {
@@ -310,6 +312,82 @@ describe('runVerify', () => {
     // The counts stay unset: a zero here would be a claim about the manual, and
     // this run never received one.
     expect(harness.outputs['drift-count']).toBeUndefined()
+    // The tally too. "0 claims evaluated" would be the same false claim in prose.
+    expect(harness.messages.join('\n')).not.toContain('evaluated')
+  })
+
+  it('logs the claim tally on every run that got a report, clean ones included', async () => {
+    const h = runWith(report(), 'none')
+    await h.done
+    expect(h.messages).toContain(
+      'Manual check: 4 claims evaluated, 4 vouched for, 0 drifted, 0 could not be read.',
+    )
+    expect(h.summaries).toEqual([])
+  })
+
+  // Issue 126 item 4. A scoped pull request that touches no cited file evaluates
+  // nothing, and this run used to log "nothing this run could not vouch for",
+  // the same words as a run that read every claim and found them all holding.
+  describe('a run that evaluated no claims', () => {
+    const nothingEvaluated = () => report({ evaluatedCount: 0, skippedCount: 12 })
+
+    it('says it vouched for nothing in the log and the job summary', async () => {
+      const h = runWith(nothingEvaluated(), 'none')
+      await h.done
+      const log = h.messages.join('\n')
+      expect(log).toContain('This run vouched for nothing: it evaluated no claims.')
+      expect(log).toContain('0 claims evaluated, 0 vouched for, 0 drifted, 0 could not be read.')
+      expect(log).toContain('The check is green, but not because anything was verified.')
+      expect(log).not.toContain('nothing this run could not vouch for')
+      expect(h.summaries).toHaveLength(1)
+      expect(h.summaries[0]).toContain('This run vouched for nothing: it evaluated no claims.')
+    })
+
+    it('stays green at every fail-on setting, so no consumer build starts failing', async () => {
+      for (const failOn of ['none', 'drift', 'any'] as const) {
+        const h = runWith(nothingEvaluated(), failOn)
+        await h.done
+        expect(h.failures).toEqual([])
+        expect(h.outputs['check-failed']).toBe('false')
+      }
+    })
+
+    it('adds no annotation, so the drift annotations keep the whole budget', async () => {
+      const h = runWith(nothingEvaluated(), 'none')
+      await h.done
+      expect(h.annotations).toEqual([])
+      expect(h.warnings).toEqual([])
+    })
+  })
+
+  describe('a run that could read none of the claims it evaluated', () => {
+    const readNothing = () => report({ evaluatedCount: 2, errorCount: 2, unverifiable: true })
+
+    it('says it vouched for nothing while the check stays green', async () => {
+      const h = runWith(readNothing(), 'none')
+      await h.done
+      expect(h.failures).toEqual([])
+      expect(h.messages.join('\n')).toContain(
+        'This run vouched for nothing: not one of the 2 claims it evaluated could be read.',
+      )
+      expect(h.summaries[0]).toContain('This run vouched for nothing')
+    })
+
+    it('fails under fail-on: any with a line that says it vouched for nothing', async () => {
+      const h = runWith(readNothing(), 'any')
+      await h.done
+      expect(h.failures).toEqual([
+        'Manual check failed: this run vouched for none of the 2 claims it evaluated, because not one of them could be read.',
+      ])
+    })
+  })
+
+  it('CONTROL: a run with one claim held among unreadable ones does not say it vouched for nothing', async () => {
+    const h = runWith(report({ evaluatedCount: 3, errorCount: 2, unverifiable: true }), 'none')
+    await h.done
+    expect(h.messages.join('\n')).toContain('3 claims evaluated, 1 vouched for, 0 drifted, 2 could not be read.')
+    expect(h.messages.join('\n')).not.toContain('vouched for nothing')
+    expect(h.summaries[0]).not.toContain('vouched for nothing')
   })
 
   it('fails the check when the endpoint does', async () => {

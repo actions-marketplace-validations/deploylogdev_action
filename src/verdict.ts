@@ -15,6 +15,14 @@
 // a checker that is simply broken. `any` is how that team says so. The three
 // settings select which signals fail the check; they never merge them, and both
 // are reported whichever setting is in force.
+//
+// And what the run vouched for, from deploylog issue 126 item 4. `confirmedCount`
+// is drift, so "read it and it holds" and "could not read any of it" both report
+// zero, and the green check said the same thing for both. `vouched` is the
+// claims that held, derived exactly as the CLI derives it, and a run that
+// vouched for nothing says so in the log and the job summary. It is reported,
+// never escalated: it changes no exit status at any `fail-on` setting, so no
+// consumer's build changes colour on upgrade.
 
 import { ANNOTATION_LIMIT } from './annotate.js'
 import type { AnnotationPlan, VerificationCounts, VerificationReportView } from './annotate.js'
@@ -38,6 +46,16 @@ export interface NotCleanReason {
 export interface Verdict {
   /** Claims whose cited value moved. The only drift signal. */
   drift: number
+  /**
+   * Evaluated, vouched for, drifted and unreadable, in one line, so the derived
+   * number sits beside the three it comes from and can be checked, not trusted.
+   * Vouched for means read and found to hold: evaluated minus drifted minus
+   * unreadable, because the wire has no count for it. Negative only when the
+   * report contradicts itself, which `vouchedNothing` then says.
+   */
+  tally: string
+  /** The headline when this run vouched for nothing, or null. Reported, never escalated. */
+  vouchedNothing: string | null
   /** Why this run cannot be called clean. Never folded into `drift`. */
   reasons: NotCleanReason[]
   failed: boolean
@@ -62,13 +80,61 @@ function isFailOn(value: string): value is FailOn {
 
 export function decideVerdict(counts: VerificationCounts, failOn: FailOn): Verdict {
   const drift = counts.confirmedCount
+  const evaluated = counts.evaluatedCount
+  const vouched = evaluated - drift - counts.errorCount
+  const nothing = vouchedNothingFor(counts, vouched)
   const reasons = notCleanReasons(counts)
 
   const failsOnDrift = drift > 0 && (failOn === 'drift' || failOn === 'any')
   const failsOnUnverifiable = reasons.length > 0 && failOn === 'any'
   const failed = failsOnDrift || failsOnUnverifiable
 
-  return { drift, reasons, failed, failure: failed ? failureLine(drift, reasons) : null }
+  return {
+    drift,
+    tally: `${plural(evaluated, 'claim')} evaluated, ${vouched} vouched for, ${drift} drifted, ${counts.errorCount} could not be read.`,
+    vouchedNothing: nothing ? `This run vouched for nothing: ${nothing.why}.` : null,
+    reasons,
+    failed,
+    failure: failed ? failureLine(drift, reasons, nothing) : null,
+  }
+}
+
+interface VouchedNothing {
+  /** Completes "This run vouched for nothing: ...". */
+  why: string
+  /**
+   * The failure line when a run in this state fails with no drift, or null to
+   * keep the general one. Only the cases where nothing could be READ (the CLI's
+   * floor, issue 126 item 3) name it: a run that evaluated nothing fails only
+   * on some other reason, and the line has to name the reason it failed on.
+   */
+  failure: string | null
+}
+
+/**
+ * Why this run vouched for nothing, or null when it vouched for something.
+ *
+ * Deliberately NOT `vouched <= 0`. That is also true when every evaluated claim
+ * DRIFTED, which is a fully informative run; the CLI shipped that spelling first
+ * and narrowed it in review. Three cases, in this order: the counts contradict
+ * each other (the wire schema does not cross-validate them, so a negative
+ * `vouched` parses, and printing it as a finding would be a guess), nothing was
+ * evaluated, or every evaluated claim was unreadable.
+ */
+function vouchedNothingFor(counts: VerificationCounts, vouched: number): VouchedNothing | null {
+  if (vouched < 0) {
+    const why = `the report's own counts do not add up (evaluated ${counts.evaluatedCount}, drifted ${counts.confirmedCount}, unreadable ${counts.errorCount})`
+    return { why, failure: `Manual check failed: this run vouched for nothing, because ${why}.` }
+  }
+  if (counts.evaluatedCount === 0) return { why: 'it evaluated no claims', failure: null }
+  if (counts.errorCount === counts.evaluatedCount) {
+    const claims = plural(counts.evaluatedCount, 'claim')
+    return {
+      why: `not one of the ${claims} it evaluated could be read`,
+      failure: `Manual check failed: this run vouched for none of the ${claims} it evaluated, because not one of them could be read.`,
+    }
+  }
+  return null
 }
 
 function notCleanReasons(counts: VerificationCounts): NotCleanReason[] {
@@ -106,7 +172,14 @@ function notCleanReasons(counts: VerificationCounts): NotCleanReason[] {
   return reasons
 }
 
-function failureLine(drift: number, reasons: NotCleanReason[]): string {
+function failureLine(
+  drift: number,
+  reasons: NotCleanReason[],
+  nothing: VouchedNothing | null,
+): string {
+  // The floor's own headline, as the CLI prints it: a run that read nothing and
+  // failed under `any` says what it vouched for, not just "could not vouch".
+  if (drift === 0 && nothing?.failure) return nothing.failure
   if (drift > 0 && reasons.length > 0) {
     return `Manual check failed: ${plural(drift, 'claim')} drifted, and this run could not vouch for the rest of the manual.`
   }
@@ -122,16 +195,23 @@ function failureLine(drift: number, reasons: NotCleanReason[]): string {
  * not clean.
  *
  * Returns an empty string when there is nothing to report. A checker that
- * chatters on a clean run gets muted, and a muted checker is decorative.
+ * chatters on a clean run gets muted, and a muted checker is decorative. A run
+ * that vouched for nothing is not a clean run, so it gets a summary: that green
+ * is the one issue 126 found indistinguishable from a real pass.
  */
 export function renderSummary(
   report: VerificationReportView,
   plan: AnnotationPlan,
   verdict: Verdict,
 ): string {
-  if (verdict.drift === 0 && verdict.reasons.length === 0) return ''
+  if (verdict.drift === 0 && verdict.reasons.length === 0 && verdict.vouchedNothing === null) {
+    return ''
+  }
 
   const lines: string[] = ['## DeployLog manual check', '']
+
+  if (verdict.vouchedNothing) lines.push(`**${verdict.vouchedNothing}**`, '')
+  lines.push(verdict.tally, '')
 
   if (verdict.drift > 0) {
     const shown = Math.min(plan.annotations.length, ANNOTATION_LIMIT)
@@ -161,7 +241,9 @@ export function renderSummary(
         '',
       )
     }
-  } else {
+  } else if (!verdict.vouchedNothing) {
+    // Withheld from a run that vouched for nothing: "no drift found" over claims
+    // nobody read is the false reassurance issue 126 quotes.
     lines.push('**No drift found.**', '')
   }
 
@@ -213,7 +295,13 @@ function escalationNote(verdict: Verdict): string {
   const unescalated =
     verdict.drift > 0
       ? 'This check is green because escalation is off'
-      : 'This check is green because no claim drifted'
+      : verdict.vouchedNothing
+        ? 'This check is green, but not because anything was verified'
+        : 'This check is green because no claim drifted'
+  // No drift and no reason is reachable here only by a run that evaluated
+  // nothing, and no setting fails that run. Naming one would promise a red
+  // that never comes.
+  if (verdict.drift === 0 && verdict.reasons.length === 0) return `${unescalated}.`
   return `${unescalated}. Set \`fail-on: drift\` to fail on drift, or \`fail-on: any\` to fail on anything this run could not vouch for.`
 }
 

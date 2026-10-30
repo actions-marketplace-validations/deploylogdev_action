@@ -65,13 +65,19 @@ export interface ChapterFindings {
 
 /**
  * The counts the server publishes beside its verdicts. Drift is
- * `confirmedCount`; every other count is a reason the run cannot be called
- * clean. They are read by `decideVerdict`, never collapsed into one another.
+ * `confirmedCount`; `evaluatedCount` is the denominator; every other count is a
+ * reason the run cannot be called clean. They are read by `decideVerdict`,
+ * never collapsed into one another.
  */
 export interface VerificationCounts {
   confirmedCount: number
   errorCount: number
   unanchoredCount: number
+  /**
+   * Claims checked at this ref. Each one held, drifted or could not be read, so
+   * what held is this minus the other two (`vouched` in `decideVerdict`).
+   */
+  evaluatedCount: number
   /** Numbers of the chapters whose claim coverage is below threshold. */
   lowCoverageChapters: string[]
   untriggeredCount: number

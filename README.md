@@ -112,6 +112,12 @@ prevent.
 Drift and "could not vouch" are reported separately and never merged, so a broken checker cannot
 read as a clean one. Start on `none`, and move up once the findings are ones you trust.
 
+Every run logs how many claims it evaluated and how many it vouched for, meaning read and found to
+hold. A run that vouched for nothing says so in the log and the job summary: one that evaluated no
+claims (a pull request that changed no file the manual cites), or one that could not read any of
+them. That line is a report, not a failure. It does not change the result at any `fail-on`
+setting, and `fail-on: any` already fails a run that could read nothing.
+
 ### Pull requests from forks
 
 GitHub does not give repository secrets to a workflow triggered by a fork's pull request, so

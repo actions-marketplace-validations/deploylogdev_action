@@ -31,10 +31,13 @@ function driftReportOf(n: number): VerificationReportView {
 
 const REPO = 'deploylogdev/action'
 
+// Twenty claims evaluated, so every fixture below that turns one count on
+// still has claims that held. A run that evaluated nothing is its own arm.
 const CLEAN: VerificationCounts = {
   confirmedCount: 0,
   errorCount: 0,
   unanchoredCount: 0,
+  evaluatedCount: 20,
   lowCoverageChapters: [],
   untriggeredCount: 0,
 }
@@ -141,8 +144,100 @@ describe('decideVerdict', () => {
     for (const failOn of ['none', 'drift', 'any'] as const) {
       const verdict = decideVerdict(CLEAN, failOn)
 
-      expect(verdict).toEqual({ drift: 0, reasons: [], failed: false, failure: null })
+      expect(verdict).toEqual({
+        drift: 0,
+        tally: '20 claims evaluated, 20 vouched for, 0 drifted, 0 could not be read.',
+        vouchedNothing: null,
+        reasons: [],
+        failed: false,
+        failure: null,
+      })
     }
+  })
+})
+
+// Issue 126 item 4. `confirmedCount` is drift, so "read it and it holds" and
+// "could not read any of it" both report zero, and the green badge could not
+// tell them apart. `vouched` is the remainder: every evaluated claim held,
+// drifted or could not be read, which is how the CLI derives it too.
+describe('what the run vouched for', () => {
+  it('derives vouched from the counts and prints it beside them', () => {
+    // The production run issue 126 re-measured at 04728b4.
+    const verdict = decideVerdict(
+      counts({ evaluatedCount: 459, confirmedCount: 2, errorCount: 121 }),
+      'none',
+    )
+
+    expect(verdict.tally).toBe(
+      '459 claims evaluated, 336 vouched for, 2 drifted, 121 could not be read.',
+    )
+    expect(verdict.vouchedNothing).toBeNull()
+  })
+
+  it('says a run that evaluated no claims vouched for nothing', () => {
+    const verdict = decideVerdict(counts({ evaluatedCount: 0 }), 'none')
+
+    expect(verdict.vouchedNothing).toBe('This run vouched for nothing: it evaluated no claims.')
+    expect(verdict.tally).toBe('0 claims evaluated, 0 vouched for, 0 drifted, 0 could not be read.')
+  })
+
+  it('says a run that could read none of its claims vouched for nothing', () => {
+    const verdict = decideVerdict(counts({ evaluatedCount: 9, errorCount: 9 }), 'none')
+
+    expect(verdict.tally).toBe('9 claims evaluated, 0 vouched for, 0 drifted, 9 could not be read.')
+    expect(verdict.vouchedNothing).toBe(
+      'This run vouched for nothing: not one of the 9 claims it evaluated could be read.',
+    )
+  })
+
+  it('says so when the counts contradict each other, instead of printing a negative as a finding', () => {
+    // The wire schema does not cross-validate the counts, so this parses. Reading
+    // it as clean would be the defect; reading it as "nothing held" is a guess.
+    const verdict = decideVerdict(counts({ evaluatedCount: 1, errorCount: 2 }), 'none')
+
+    expect(verdict.tally).toBe('1 claim evaluated, -1 vouched for, 0 drifted, 2 could not be read.')
+    expect(verdict.vouchedNothing).toContain('vouched for nothing')
+    expect(verdict.vouchedNothing).toContain('do not add up (evaluated 1, drifted 0, unreadable 2)')
+  })
+
+  // The narrowing the CLI made in its own review pass. Every claim drifting
+  // also leaves vouched at 0, and that run is fully informative: drift is the
+  // finding, not a failure to check. A predicate true of both is the collapse
+  // this whole module exists to prevent.
+  it('CONTROL: a run where every evaluated claim drifted did not vouch for nothing', () => {
+    const verdict = decideVerdict(counts({ evaluatedCount: 3, confirmedCount: 3 }), 'none')
+
+    expect(verdict.tally).toBe('3 claims evaluated, 0 vouched for, 3 drifted, 0 could not be read.')
+    expect(verdict.vouchedNothing).toBeNull()
+  })
+
+  it('CONTROL: one unreadable claim among readable ones is not vouched-for-nothing', () => {
+    const verdict = decideVerdict(counts({ evaluatedCount: 9, errorCount: 8 }), 'none')
+
+    expect(verdict.tally).toBe('9 claims evaluated, 1 vouched for, 0 drifted, 8 could not be read.')
+    expect(verdict.vouchedNothing).toBeNull()
+  })
+
+  // The default this change keeps: no consumer's build changes colour. A run that
+  // vouched for nothing is reported at every setting and fails at none of them on
+  // that ground alone. `any` still fails a run that read nothing, because an
+  // unreadable claim is already one of its reasons.
+  it('changes no exit status: vouched-for-nothing alone fails no setting', () => {
+    for (const failOn of ['none', 'drift', 'any'] as const) {
+      expect(decideVerdict(counts({ evaluatedCount: 0 }), failOn).failed).toBe(false)
+    }
+    for (const failOn of ['none', 'drift'] as const) {
+      expect(decideVerdict(counts({ evaluatedCount: 9, errorCount: 9 }), failOn).failed).toBe(false)
+    }
+    expect(decideVerdict(counts({ evaluatedCount: 9, errorCount: 9 }), 'any').failed).toBe(true)
+  })
+
+  it('names what it vouched for in the failure line when a run that read nothing fails', () => {
+    const verdict = decideVerdict(counts({ evaluatedCount: 9, errorCount: 9 }), 'any')
+
+    expect(verdict.failure).toBe(
+      'Manual check failed: this run vouched for none of the 9 claims it evaluated, because not one of them could be read.',
+    )
   })
 })
 
@@ -248,6 +343,67 @@ describe('renderSummary', () => {
     const plan = planAnnotations(report, { repository: REPO })
 
     expect(renderSummary(report, plan, decideVerdict(report, 'none'))).toBe('')
+  })
+
+  it('prints the claim tally on every summary it writes', () => {
+    const report = driftReport()
+    const plan = planAnnotations(report, { repository: REPO })
+
+    const summary = renderSummary(report, plan, decideVerdict(report, 'none'))
+
+    expect(summary).toContain('20 claims evaluated, 19 vouched for, 1 drifted, 0 could not be read.')
+  })
+
+  // Issue 126 item 4: before this, a run that evaluated nothing wrote no summary
+  // and logged "nothing this run could not vouch for", the same green as a run
+  // that read every claim and found them all holding.
+  it('writes a summary for a run that evaluated no claims, and says it vouched for nothing', () => {
+    const report: VerificationReportView = { chapters: [], ...counts({ evaluatedCount: 0 }) }
+    const plan = planAnnotations(report, { repository: REPO })
+
+    const summary = renderSummary(report, plan, decideVerdict(report, 'none'))
+
+    expect(summary).toContain('**This run vouched for nothing: it evaluated no claims.**')
+    expect(summary).toContain('0 claims evaluated, 0 vouched for, 0 drifted, 0 could not be read.')
+    expect(summary).toContain('This check is green, but not because anything was verified.')
+    // "No drift found" over a run that looked at nothing is the false
+    // reassurance issue 126 quotes; and no fail-on setting fails this run, so
+    // naming one would promise a red that never comes.
+    expect(summary).not.toContain('No drift found')
+    expect(summary).not.toContain('because no claim drifted')
+    expect(summary).not.toContain('fail-on')
+  })
+
+  it('heads a run that could read none of its claims with vouched-for-nothing, and keeps the reasons', () => {
+    const report: VerificationReportView = {
+      chapters: [],
+      ...counts({ evaluatedCount: 9, errorCount: 9 }),
+    }
+    const plan = planAnnotations(report, { repository: REPO })
+
+    const summary = renderSummary(report, plan, decideVerdict(report, 'none'))
+
+    expect(summary).toContain(
+      '**This run vouched for nothing: not one of the 9 claims it evaluated could be read.**',
+    )
+    expect(summary).toContain('9 claims could not be read at all.')
+    expect(summary).toContain('This check is green, but not because anything was verified.')
+    expect(summary).toContain('fail-on: any')
+    expect(summary).not.toContain('No drift found')
+  })
+
+  it('ends a failed run that read nothing on the vouched-for-nothing failure line', () => {
+    const report: VerificationReportView = {
+      chapters: [],
+      ...counts({ evaluatedCount: 9, errorCount: 9 }),
+    }
+    const plan = planAnnotations(report, { repository: REPO })
+
+    const summary = renderSummary(report, plan, decideVerdict(report, 'any'))
+
+    expect(summary.trimEnd().split('\n').at(-1)).toBe(
+      'Manual check failed: this run vouched for none of the 9 claims it evaluated, because not one of them could be read.',
+    )
   })
 })
 
